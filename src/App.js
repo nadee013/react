@@ -1,12 +1,30 @@
 var React = require('react');
+require('es6-promise').polyfill();
+require('isomorphic-fetch');
 
-var blogs = [
-  {'name': 'Discover Meteor insights', 'link': '/page1'},
-  {'name': 'Kadira new features', 'link': '/page2'},
-  {'name': 'MeteorHacks retires..!', 'link': '/page3'}
-];
+var blogs = [];
+var fetchUrl = fetch('http://localhost:4000');
 
 var Home = React.createClass({
+  getInitialState: function() {
+    return {
+      "stateBlogs": blogs,
+      "currPage": "home"
+    }
+  },
+  componentWillMount: function() {
+    var self = this;
+    fetchUrl.then(function(response) {
+      if (response.status >= 400) {
+        throw new Error("Bad response from server");
+      }
+      return response.json();
+    })
+    .then(function(posts) {
+      blogs = posts;
+      self.setState({"stateBlogs": blogs});
+    });
+  },
   goHome () {
     this.setState({"currPage": "home"});
   },
@@ -19,7 +37,7 @@ var Home = React.createClass({
     if(state && state.currPage && state.currPage === "blogPage") {
       return <BlogPage onBackClick={this.goHome} pageData={this.state.currData}/>
     } else {
-      return <BlogsList onPageClick={this.gotoBlogPage}/>
+      return <BlogsList onPageClick={this.gotoBlogPage} blogs={this.state.stateBlogs}/>
     }
   }
 });
@@ -30,11 +48,12 @@ var BlogsList = React.createClass({
   },
   render: function() {
     var self = this;
+    // console.log(self);
     return (
       <div>
         <h1>Blogs List</h1>
         <ul> {
-          blogs.map(function(item) {
+          self.props.blogs.map(function(item) {
             return (
               <li>
                 <a href="#" onClick={self.clickBlog.bind(self, item)}>{item.name}</a>
